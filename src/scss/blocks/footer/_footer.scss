@@ -1,6 +1,7 @@
+@use './variables/variables' as v;
 .footer {
     min-height: 180px;
-    background-color: $dark;
+    background-color: v.$dark;
     padding: 45px 0 50px 0;
     color: #fff;
     .container {

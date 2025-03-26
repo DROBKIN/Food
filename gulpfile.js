@@ -1,11 +1,13 @@
 const gulp = require("gulp");
+const sass = require('gulp-dart-sass');
 const webpack = require("webpack-stream");
-const sass = require("gulp-sass")(require("sass"));
 const autoprefixer = require("autoprefixer");
 const cleanCSS = require("gulp-clean-css");
 const postcss = require("gulp-postcss");
 const browsersync = require("browser-sync");
 const del = async () => (await import('del')).deleteAsync;
+const path = require("path");
+
 
 
 const dist = "./dist";
@@ -72,6 +74,7 @@ gulp.task("build-sass", () => {
 		.pipe(browsersync.stream());
 		
 });
+
 
 gulp.task("copy-assets", () => {
 	gulp.src("./src/icons/**/*.*").pipe(gulp.dest(dist + "/icons"));
@@ -143,7 +146,8 @@ gulp.task("prod", () => {
 
 	return gulp
 		.src("./src/scss/style.scss")
-		.pipe(sass().on("error", sass.logError))
+		// .pipe(sass().on("error", sass.logError))
+		.pipe(sass({ includePaths: ['./src/scss'] }).on("error", sass.logError))
 		.pipe(postcss([autoprefixer()]))
 		.pipe(cleanCSS())
 		.pipe(gulp.dest(dist + "/css"));

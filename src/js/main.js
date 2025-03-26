@@ -1,10 +1,6 @@
 'use strict'
-
-
 window.addEventListener('DOMContentLoaded', () => {
-
     // Tabs
-
     const tabs = document.querySelectorAll('.tabheader__item'),
           tabsContent = document.querySelectorAll('.tabcontent'),
           tabsParent = document.querySelector('.tabheader__items');
@@ -44,7 +40,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Timer
 
-    const deadline = '2025-03-07';
+    const deadline = '2025-04-17';
 
     function getTimeRemaining(endtime) {
         let days, hours, minutes, seconds;
@@ -193,38 +189,31 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    new MenuCard(
-      'img/tabs/vegy.jpg',
-      'vegy',
-      'Меню "Фитнес"',
-      'Меню "Фитнес" - это новый подход к приготовлению блюд: больше свежих овощей и фруктов. Продукт активных и здоровых людей. Это абсолютно новый продукт с оптимальной ценой и высоким качеством!',
-        10,
-      '.menu .container',
-      'menu__item'
-    ).render();
+    const getResource = async (url) => {
+        const res = await fetch(url);
+    
+        if (!res.ok) {
+            throw new Error(`Could not fetch ${url}, status: ${res.status}`);
+        }
+    
+        return await res.json()
+      };
 
-
-
-    new MenuCard(
-        'img/tabs/elite.jpg',
-        'elite',
-        'Меню “Премиум”"',
-        'В меню “Премиум” мы используем не только красивый дизайн упаковки, но и качественное исполнение блюд. Красная рыба, морепродукты, фрукты - ресторанное меню без похода в ресторан!',
-          30,
-        '.menu .container',
-        'menu__item'
-      ).render();
-
-
-    new MenuCard(
-        'img/tabs/post.jpg',
-        'post',
-        'Меню "Постное"',
-        'Меню “Постное” - это тщательный подбор ингредиентов: полное отсутствие продуктов животного происхождения, молоко из миндаля, овса, кокоса или гречки, правильное количество белков за счет тофу и импортных вегетарианских стейков.',
-        15.5,
-        '.menu .container',
-        'menu__item'
-    ).render();
+    //   Так же можно использовать json-server, изменить url 
+    //   И можно без проверки на массив для метода forEach
+  
+    getResource('menu.json')
+    .then(data => {
+        const menuItems = Array.isArray(data) ? data : data.menu; 
+        if (!Array.isArray(menuItems)) {
+            throw new Error("Ожидался массив, но получено: " + JSON.stringify(data));
+        }
+        menuItems.forEach(({img, altimg, title, descr, price}) => {
+            new MenuCard(img, altimg, title, descr, price, '.menu .container').render();
+        });
+    })
+    .catch(error => console.error("Ошибка загрузки меню:", error));
+  
 
     // Forms
 
@@ -237,10 +226,21 @@ window.addEventListener('DOMContentLoaded', () => {
     };
 
     forms.forEach(item => {
-        postData(item);
+        bindPostData(item);
     });
 
-    function postData(form) {
+   const postData = async (url, data) => {
+        const res = await fetch(url, {
+            method: 'POST', 
+            headers: {
+                'Content-type': 'application/json'
+            },
+            body: data
+        });
+        return await res.json();
+   }
+
+    function bindPostData(form) {
         form.addEventListener('submit', (e) => {
             e.preventDefault();
 
@@ -255,19 +255,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
             const formData = new FormData(form);
 
-            const obj = {};
+            const json = JSON.stringify(Object.fromEntries(formData.entries()));
 
-            formData.forEach(function(value, key) {
-                obj[key] = value;
-            });
+            postData('menu.json', json)
 
-            fetch('server.php', {
-                method: 'POST', 
-                headers: {
-                    'Content-type': 'application/json'
-                },
-                body: JSON.stringify(obj)
-            }).then(data => data.text())
             .then(data => {
                 console.log(data);
                 showThanksModal(message.success);
@@ -304,4 +295,80 @@ window.addEventListener('DOMContentLoaded', () => {
             closeModal();
         }, 4000);
     }
+
+    // Hamburger menu
+
+    const burger = document.querySelector('.hamburger'),
+          menu = document.querySelector('.header__links'),
+          closeBtn = document.querySelector('.menu__close'),
+          overlay = document.querySelector('.overlay__links');
+
+    function toggleMenu(state) {
+        const isActive = state !== undefined ? state : !menu.classList.contains('header__links_active');
+        burger.classList.toggle('hamburger_active', isActive);
+        menu.classList.toggle('header__links_active', isActive);
+        overlay.classList.toggle('active', isActive);
+    }
+    // Открытие бургера и меню
+    burger.addEventListener('click', () => toggleMenu(true));
+    // Закрытие на крестик меню 
+    closeBtn.addEventListener('click', () => toggleMenu(false));
+    // Закрытие меню при нажатии на оверлей
+    overlay.addEventListener('click', () => toggleMenu(false));
+
+    document.addEventListener('keydown', (event) => {
+        if (event.code === 'Escape' && menu.classList.contains('header__links_active')) {
+            toggleMenu(false);
+        }
+    });
+    
+    
+    // Slider
+
+    const slides = document.querySelectorAll('.offer__slide'),
+          prev = document.querySelector('.offer__slider-prev'),
+          next = document.querySelector('.offer__slider-next'),
+          total = document.querySelector('#total'),
+          curr = document.querySelector('#current');
+
+
+    let currentIndex = 1;
+    
+    showSlide(currentIndex);
+
+    if (slides.length < 10) {
+        total.textContent = `0${slides.length}`;
+    } else {
+        total.textContent = slides.length;
+    }
+
+    function showSlide(index) {
+        if (index > slides.length) {
+            currentIndex = 1;
+        }
+        if (index < 1) {
+            currentIndex = slides.length;
+        }
+
+        slides.forEach(item => item.style.display = 'none');
+        slides[currentIndex - 1].style.display = 'block';
+
+        if (slides.length < 10 ) {
+            curr.textContent = `0${currentIndex}`;
+        } else {
+            curr.textContent = currentIndex;
+        }
+     }
+
+    function plusSlides(n) {
+        showSlide(currentIndex += n);
+    }
+
+    prev.addEventListener('click', () => {
+        plusSlides(-1);
+    });
+    next.addEventListener('click', () => {
+        plusSlides(1);
+    });
+
 });
